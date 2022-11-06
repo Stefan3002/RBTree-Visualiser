@@ -1,0 +1,12 @@
+.button-container button {
+  background: transparent;
+  border: 1px solid black;
+  padding: 1em;
+  font-family: "Josefin Sans", sans-serif;
+  margin: 1em 0;
+}
+.button-container button:focus {
+  outline: none;
+}
+
+/*# sourceMappingURL=button.css.map */

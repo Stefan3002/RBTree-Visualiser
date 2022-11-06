@@ -1,0 +1,31 @@
+.node-container {
+  z-index: 100;
+  color: whitesmoke;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  background: orange;
+  animation-name: pop-up;
+  animation-duration: 0.2s;
+  text-align: center;
+  transition: all 0.2s;
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.node-container p {
+  animation-duration: 0.27s;
+  animation-name: pop-up;
+}
+
+@keyframes pop-up {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/*# sourceMappingURL=node.css.map */
