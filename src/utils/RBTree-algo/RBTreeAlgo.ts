@@ -131,11 +131,10 @@ const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION): Promi
     pChild.textContent = x.Key.toString()
     newVisualChild.appendChild(pChild)
     //Create the parent node.
-    //But this time use deep cloning because we want those translates as well.
-    const newVisualParent = visualNodeX.cloneNode(false)
-    const p = document.createElement('p')
-    p.textContent = y.Key.toString()
-    newVisualParent.appendChild(p)
+    //But this time use deep cloning because we want his children as well.
+    const newVisualParent = visualNodeY.cloneNode(true)
+    //Get me the translates of the x node.
+    const visualNodeXTranslates = getComputedStyle(visualNodeX).transform
     newVisualParent.appendChild(newVisualChild)
     //Append the new parent-child thing.
     //Insert the new parent before the old one.
@@ -144,14 +143,20 @@ const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION): Promi
     if(g) {
         const visualGrandParent = document.querySelector(`#c${g.UIId}`)!
         visualGrandParent.insertBefore(newVisualParent, visualNodeX)
+        //Put the translates of the node x to the DOM representation of the new parent.
+        const newVisualParentDOM = document.querySelector(`#c${y.UIId}`) as HTMLDivElement
+        newVisualParentDOM.style.transform = visualNodeXTranslates
+
     }
     //But what if the parent is undefined?
     //Then x would be the root, so what now?
     else {
-        console.log('HERE')
         // root = y
         const visualGrandParent = document.querySelector('.visual-area')!
         visualGrandParent.appendChild(newVisualParent)
+        //Put the translates of the node x to the DOM representation of the new parent.
+        const newVisualParentDOM = document.querySelector(`#c${y.UIId}`) as HTMLDivElement
+        newVisualParentDOM.style.transform = visualNodeXTranslates
     }
     await waitForVisualAnimations(500)
     //Remove the old visual nodes.
@@ -181,7 +186,7 @@ const rotateLeft = async (x: Node): Promise<INode> => {
     const p = x.Parent
     if(y) {
         y.Left = x
-        await visuallyRotateNode(x, y, DIRECTION.RIGHT)
+        await visuallyRotateNode(x, y, DIRECTION.LEFT)
     }
     x.Right = subtree
     //Fix the parents.
@@ -350,9 +355,14 @@ const RBFixup = async (node: Node, root: Node): Promise<void> => {
                         else
                             if(node === p.Right && p === g?.Right) {
                                 await rotateLeft(g)
-                                console.log(g, node, p)
                                 // await RBFixup(g, root)
                             }
+                            //LL case
+                            else
+                                if(node === p.Left && p === g?.Left) {
+                                    await rotateRight(g)
+                                    // await RBFixup(g, root)
+                                }
                 }
            // Just color the node back.
             await colorNode(node, 'red')
