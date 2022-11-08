@@ -1,6 +1,6 @@
 import {Node} from "./RBTreeAlgo";
 
-export const SPEED = 10
+export const SPEED = 100
 //Because GSAP wants a duration of 1, we have to accommodate this with our speed of 1000
 export const GSAPSPEED: number = SPEED / 1000
 export const SPACE_BETWEEN_NODES_X = 50

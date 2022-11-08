@@ -3,7 +3,7 @@ import {
     ANIMATION_MODE,
     ANIMATION_OFFSET,
     COLOR,
-    DIRECTION,
+    DIRECTION, GSAPSPEED,
     INode,
     SPACE_BETWEEN_NODES_X,
     SPACE_BETWEEN_NODES_Y,
@@ -116,111 +116,85 @@ const computeBalance = (node: Node): number => {
 }
 
 //Function that rotates the visual nodes on the screen.
-const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION): Promise<void> => {
+const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION, root: Node): Promise<void> => {
     const visualNodeY = document.querySelector(`#c${y.UIId}`)!
     const visualNodeX = document.querySelector(`#c${x.UIId}`)!
 
-    // Remove y so you do not deep clone it.
-    visualNodeY.remove()
-    //Create the new child, which is x.
-    //Do not use deep cloning because it would copy the old translates.
-    const newVisualChild = document.createElement('div')
-    const pChild = document.createElement('p')
-    newVisualChild.classList.add('node-container')
-    newVisualChild.id = `c${y.UIId.toString()}`
-    pChild.textContent = x.Key.toString()
-    newVisualChild.appendChild(pChild)
-    //Create the parent node.
-    //But this time use deep cloning because we want his children as well.
-    const newVisualParent = visualNodeY.cloneNode(true)
-    //Get me the translates of the x node.
-    const visualNodeXTranslates = getComputedStyle(visualNodeX).transform
-    newVisualParent.appendChild(newVisualChild)
-    //Append the new parent-child thing.
-    //Insert the new parent before the old one.
-    //But remember that I need to know the grandparent for this to work.
-    const g = x.Parent
-    if(g) {
-        const visualGrandParent = document.querySelector(`#c${g.UIId}`)!
-        visualGrandParent.insertBefore(newVisualParent, visualNodeX)
-        //Put the translates of the node x to the DOM representation of the new parent.
-        const newVisualParentDOM = document.querySelector(`#c${y.UIId}`) as HTMLDivElement
-        newVisualParentDOM.style.transform = visualNodeXTranslates
+    //Visually animate the rotation itself.
 
-    }
-    //But what if the parent is undefined?
-    //Then x would be the root, so what now?
-    else {
-        // root = y
-        const visualGrandParent = document.querySelector('.visual-area')!
-        visualGrandParent.appendChild(newVisualParent)
-        //Put the translates of the node x to the DOM representation of the new parent.
-        const newVisualParentDOM = document.querySelector(`#c${y.UIId}`) as HTMLDivElement
-        newVisualParentDOM.style.transform = visualNodeXTranslates
-    }
-    await waitForVisualAnimations(500)
-    //Remove the old visual nodes.
-    visualNodeX.remove()
-    //Just move the child.
-    //If we are rotating left.
+    //INTERESTING FACT: GSAP does NOT stack your commands, so if the node already has translateX: 100%
+    //Saying it again would mean the same thing, NOT translateX: 200%
+    //Use this: "yPercent: +100" to APPEND the new translate.
+
     if(direction === DIRECTION.LEFT) {
         // @ts-ignore
-        gsap.to(newVisualChild, {duration: .5, x: '-100%', y: '100%', scaleX: '1', scaleY: '1', ease: ANIMATION_MODE})
+        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: -100, ease: ANIMATION_MODE})
+        x.UI.x -= SPACE_BETWEEN_NODES_X
     }
-    //If we are rotating right.
     else {
         // @ts-ignore
-        gsap.to(newVisualChild, {duration: .5, x: '100%', y: '100%', scaleX: '1', scaleY: '1', ease: ANIMATION_MODE})
+        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: +100, ease: ANIMATION_MODE})
+        x.UI.x += SPACE_BETWEEN_NODES_X
     }
-    await waitForVisualAnimations(500 + ANIMATION_OFFSET)
-    //Wait so people can see the modifications.
-    await waitForVisualAnimations(WAITING_TIME)
+
+    await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
+    // @ts-ignore
+    gsap.to(visualNodeX, {duration: GSAPSPEED / 3, yPercent: +100, ease: ANIMATION_MODE})
+    x.UI.x += SPACE_BETWEEN_NODES_X
+    await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
+    // @ts-ignore
+    gsap.to(visualNodeY, {duration: GSAPSPEED / 3, y: '-100%', ease: ANIMATION_MODE})
+    y.UI.y -= SPACE_BETWEEN_NODES_Y
+    await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
+
 }
 
 
 // This function rotates some nodes.
-const rotateLeft = async (x: Node): Promise<INode> => {
+const rotateLeft = async (x: Node, root: Node): Promise<INode> => {
 // Here the Tree is RIGHT HEAVY
     const y = x.Right
     const subtree = y?.Left
     const p = x.Parent
+
     if(y) {
         y.Left = x
-        await visuallyRotateNode(x, y, DIRECTION.LEFT)
+        await visuallyRotateNode(x, y, DIRECTION.LEFT, root)
     }
     x.Right = subtree
     //Fix the parents.
-    if(p) {
+    if(p)
         p.Right = y
-        if(y)
-            y.Parent = p
-    }
+    if(y)
+        y.Parent = p
+
     x.Parent = y
     return y
 }
 
 // This function rotates some nodes.
-const rotateRight = async (x: Node): Promise<INode> => {
+const rotateRight = async (x: Node, root: Node): Promise<INode> => {
 // Here the Tree is LEFT HEAVY
     const y = x.Left
     const subtree = y?.Right
     const p = x.Parent
     if(y) {
         y.Right = x
-        await visuallyRotateNode(x, y, DIRECTION.RIGHT)
+        await visuallyRotateNode(x, y, DIRECTION.RIGHT, root)
     }
     x.Left = subtree
     //Fix the parents.
-    if(p) {
+    if(p)
         p.Left = y
-        if(y)
-            y.Parent = p
-    }
+    if(y)
+        y.Parent = p
+
     x.Parent = y
     return y
 }
 
 const insertAux = async (node: INode, key: number, prevNode: INode, direction: DIRECTION): Promise<Node> => {
+    console.log(node)
 //    Insert as you would in a regular BST
     if(!node) {
         //I need to handle the UI here.
@@ -291,6 +265,7 @@ export const insert = async (root: Tree, key: number): Promise<void> => {
 
 //Function that fixes the properties of a RBTree starting from a given node.
 const RBFixup = async (node: Node, root: Node): Promise<void> => {
+    console.log('--', node, root)
     //Parent of node.
     const p: INode = node.Parent
     //Grandparent of node.
@@ -330,6 +305,8 @@ const RBFixup = async (node: Node, root: Node): Promise<void> => {
                 await changeColor(g)
                 //Uncle.
                 await changeColor(u)
+                // Just color the node back.
+                await colorNode(node, 'red')
             //    Go up and continue the fix-up.
                 await RBFixup(p, root);
             }
@@ -338,34 +315,42 @@ const RBFixup = async (node: Node, root: Node): Promise<void> => {
                 if(uColor === COLOR.BLACK){
                 //    LR case.
                     if(node === p.Right && p === g?.Left) {
-                        await rotateLeft(p)
+                        await rotateLeft(p, root)
                         await colorNode(p, 'red')
+                        // Just color the node back.
                         await colorNode(node, 'red')
                         await RBFixup(p, root);
                     }
                     //    RL case.
                     else
                         if(node === p.Left && p === g?.Right) {
-                            await rotateRight(p)
+                            await rotateRight(p, root)
                             await colorNode(p, 'red')
+                            // Just color the node back.
                             await colorNode(node, 'red')
                             await RBFixup(p, root);
                         }
                         //RR case
                         else
                             if(node === p.Right && p === g?.Right) {
-                                await rotateLeft(g)
-                                // await RBFixup(g, root)
+                                await rotateLeft(g, root)
+                                await changeColor(p)
+                                await changeColor(g)
+                                // Just color the node back.
+                                await colorNode(node, 'red')
+                                await RBFixup(p, root)
                             }
                             //LL case
                             else
                                 if(node === p.Left && p === g?.Left) {
-                                    await rotateRight(g)
-                                    // await RBFixup(g, root)
+                                    await rotateRight(g, root)
+                                    await changeColor(p)
+                                    await changeColor(g)
+                                    // Just color the node back.
+                                    await colorNode(node, 'red')
+                                    await RBFixup(p, root)
                                 }
                 }
-           // Just color the node back.
-            await colorNode(node, 'red')
         }
     //No problems, just continue.
     else
