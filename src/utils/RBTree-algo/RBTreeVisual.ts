@@ -8,7 +8,7 @@ import {
     SPEED,
     UIInterface, WAITING_TIME
 } from "./RBTreeConstants";
-import {Node} from "./RBTreeAlgo";
+import {Node} from "./NodeClass";
 
 //Function that horizontally translates a given node by a given amount of pixels.
 export const translateX = async (node: HTMLDivElement, amount: string, timeToComplete: string, nodeInfo: string | undefined, color: COLOR): Promise<void> => {
@@ -74,6 +74,20 @@ export const createNodeVisual = async (UIid: number, key: number, ui: UIInterfac
         else
                 // @ts-ignore
                 gsap.to(child, {duration: GSAPSPEED / 3, x: '-100%', y: '100%',  scaleX: '1', scaleY: '1' , ease: ANIMATION_MODE})
+
+
+        // // await waitForVisualAnimations(1000)
+        // if(parent) {
+        //     //Create the line to connect the 2 nodes.
+        //     const newLine = document.createElement('div')
+        //
+        //     newLine.classList.add('line')
+        //     newLine.style.transform = 'rotate(-45deg) translate(50%, 10%)'
+        //     // @ts-ignore
+        //     gsap.to(newLine, {duration: 1, height: '70', ease: ANIMATION_MODE})
+        //     const visualParent = document.querySelector(`#c${parent.UIId}`)! as HTMLDivElement
+        //     visualParent.appendChild(newLine)
+        // }
 
         setTimeout(() => {
             resolve()

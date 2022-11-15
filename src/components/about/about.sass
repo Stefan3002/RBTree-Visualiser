@@ -1,0 +1,17 @@
+.about-container
+  position: absolute
+  left: 50%
+  top: 50%
+  transform: translate(-50%, -50%)
+  background: whitesmoke
+  padding: 2em
+  border-radius: 10px
+  z-index: 2
+  .about-text
+    animation-name: pop-up
+    animation-duration: .3s
+@keyframes pop-up
+  0%
+    transform: scale(0)
+  100%
+    transform: scale(1)

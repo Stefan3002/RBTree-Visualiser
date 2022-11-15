@@ -1,0 +1,1 @@
+export const getAboutOpened = (state) => state.about.opened

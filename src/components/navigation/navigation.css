@@ -11,5 +11,8 @@
 .navigation-container .logo-img {
   width: 100px;
 }
+.navigation-container .how-work {
+  cursor: pointer;
+}
 
 /*# sourceMappingURL=navigation.css.map */

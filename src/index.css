@@ -6,4 +6,9 @@ body {
   display: flex;
 }
 
+.line {
+  background: black;
+  width: 2px;
+}
+
 /*# sourceMappingURL=index.css.map */

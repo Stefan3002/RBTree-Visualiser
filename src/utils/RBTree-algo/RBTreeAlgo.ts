@@ -3,67 +3,17 @@ import {
     ANIMATION_MODE,
     ANIMATION_OFFSET,
     COLOR,
-    DIRECTION, GSAPSPEED,
+    DIRECTION,
+    GSAPSPEED,
     INode,
     SPACE_BETWEEN_NODES_X,
     SPACE_BETWEEN_NODES_Y,
     UIInterface,
     WAITING_TIME
 } from "./RBTreeConstants";
+import {Node} from "./NodeClass";
 
 
-export class Node {
-    public static LAST_ID: number = 0
-    private UIid: number
-    private key: number
-    private color: COLOR = COLOR.RED
-    private left: INode
-    private right: INode
-    private parent: INode
-    private ui: UIInterface
-    constructor (UIid: number, key: number, color: COLOR, left: INode, right: INode, parent: INode, UI: UIInterface) {
-        this.key = key
-        this.color = color
-        this.left = left
-        this.right = right
-        this.parent = parent
-        this.ui = UI
-        this.UIid = UIid
-    }
-    get Parent () {
-        return this.parent
-    }
-    get Color () {
-        return this.color
-    }
-    get UIId () {
-        return this.UIid
-    }
-    get UI () {
-        return this.ui
-    }
-    get Left () {
-        return this.left
-    }
-    get Right () {
-        return this.right
-    }
-    get Key () {
-        return this.key
-    }
-    set Parent (parent: INode) {
-        this.parent = parent;
-    }
-    set Left (left) {
-        this.left = left
-    }
-    set Right (right) {
-        this.right = right
-    }
-    set Color (color: COLOR) {
-        this.color = color
-    }
-}
 export class Tree {
     private root: Node
     constructor (root: Node) {
@@ -77,12 +27,15 @@ export class Tree {
     }
 }
 
-export const preTraversal = async (node: INode): Promise<void> => {
+export const preTraversal = async (node: INode, nodes: Node[], highlight: boolean): Promise<void> => {
     if(node){
-        console.log(node.Key)
-        await colorNode(node, 'green')
-        preTraversal(node.Left)
-        preTraversal(node.Right)
+        console.log(node)
+        nodes.push(node)
+        //There are some cases where I want to do this incognito! XD
+        if(highlight)
+            await colorNode(node, 'green')
+        await preTraversal(node.Left, nodes, highlight)
+        await preTraversal(node.Right, nodes, highlight)
     }
 }
 export const inTraversal = (node: INode): void => {
@@ -115,8 +68,80 @@ const computeBalance = (node: Node): number => {
     return leftHeight - rightHeight
 }
 
+//Function that fixes a given collision.
+const fixCollision = async (node1: Node, node2: Node, tree: Tree): Promise<void> => {
+    //Parent of node1.
+    let p1 = node1.Parent
+    //Parent of node2.
+    let p2 = node2.Parent
+//    Guarantee that node1 is always the left node in the collision.
+//    If not, switch the nodes.
+    if(p1 && p1.Right !== node1){
+        let aux: Node = p1
+        p1 = p2
+        p2 = aux
+        aux = node1
+        node1 = node2
+        node2 = aux
+    }
+
+    if(p1) {
+        //Cascade fix the UI
+        cascadeUIFixup(tree.Root.Left, -SPACE_BETWEEN_NODES_X, 0)
+        //Get DOM node of the uppermost node under the root.
+        const rootVisualLeft = document.querySelector(`#c${tree.Root.Left?.UIId}`)
+        if(tree.Root.Left)
+            tree.Root.Left.NOFixUps++
+        // @ts-ignore
+        gsap.to(rootVisualLeft, {duration: GSAPSPEED, xPercent: -100, ease: ANIMATION_MODE})
+    }
+    if(p2) {
+        //Cascade fix the UI
+        cascadeUIFixup(tree.Root.Right, SPACE_BETWEEN_NODES_X, 0)
+        //Get DOM node of the uppermost node under the root.
+        const rootVisualRight = document.querySelector(`#c${tree.Root.Right?.UIId}`)
+        if(tree.Root.Right)
+            tree.Root.Right.NOFixUps++
+        // @ts-ignore
+        gsap.to(rootVisualRight, {duration: GSAPSPEED, xPercent: +100, ease: ANIMATION_MODE})
+    }
+    await waitForVisualAnimations(ANIMATION_OFFSET)
+}
+
+
+const checkIfCollided =  async (node: Node, tree: Tree): Promise<boolean> => {
+    console.log("Checking for collisions!")
+    const nodeUI = node.UI
+    const nodes: Node[] = []
+    await preTraversal(tree.Root, nodes, false)
+
+    //Do not forget to remove the current node from the list of nodes.
+    for (const otherNode of nodes.filter(listNode => listNode.UIId != node.UIId)) {
+        console.log('++++++++++++++++++++++', node, otherNode)
+        if(otherNode.UI.x === nodeUI.x && otherNode.UI.y === nodeUI.y) {
+            await fixCollision(node, otherNode, tree)
+            return true
+        }
+    }
+    return false
+}
+
+//Function that fixes the UI of the subtree of the given node.
+const cascadeUIFixup = (node: INode, amountX: number, amountY: number): void => {
+    console.log(node)
+    //If node is not undefined.
+    if(node !== undefined){
+        //Fix its UI.
+        node.UI.x += amountX
+        node.UI.y += amountY
+        //Cascade to the left and right subtrees.
+        cascadeUIFixup(node.Right, amountX, amountY)
+        cascadeUIFixup(node.Left, amountX, amountY)
+    }
+}
+
 //Function that rotates the visual nodes on the screen.
-const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION, root: Node): Promise<void> => {
+const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION, tree: Tree): Promise<void> => {
     const visualNodeY = document.querySelector(`#c${y.UIId}`)!
     const visualNodeX = document.querySelector(`#c${x.UIId}`)!
 
@@ -127,31 +152,101 @@ const visuallyRotateNode = async (x: Node, y: Node, direction: DIRECTION, root: 
     //Use this: "yPercent: +100" to APPEND the new translate.
 
     if(direction === DIRECTION.LEFT) {
+        // console.log("UI OF NODE:", x.UI)
         // @ts-ignore
-        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: -100, ease: ANIMATION_MODE})
+        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: -(x.NOFixUps + 1) * 100, ease: ANIMATION_MODE})
         x.UI.x -= SPACE_BETWEEN_NODES_X
+        y.UI.x -= SPACE_BETWEEN_NODES_X
+        //Fix the ui of the subtree of y.
+        cascadeUIFixup(y.Right, -SPACE_BETWEEN_NODES_X, -SPACE_BETWEEN_NODES_Y);
+        // console.log("UI OF NODE:", x.UI)
     }
     else {
         // @ts-ignore
-        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: +100, ease: ANIMATION_MODE})
+        gsap.to(visualNodeX, {duration: GSAPSPEED / 3, xPercent: +(x.NOFixUps + 1) * 100, ease: ANIMATION_MODE})
         x.UI.x += SPACE_BETWEEN_NODES_X
+        y.UI.x += SPACE_BETWEEN_NODES_X
+        //Fix the ui of the subtree of y.
+        cascadeUIFixup(y.Left, SPACE_BETWEEN_NODES_X, -SPACE_BETWEEN_NODES_Y);
     }
+
+
 
     await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
     // @ts-ignore
     gsap.to(visualNodeX, {duration: GSAPSPEED / 3, yPercent: +100, ease: ANIMATION_MODE})
-    x.UI.x += SPACE_BETWEEN_NODES_X
+    x.UI.y += SPACE_BETWEEN_NODES_Y
     await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
     // @ts-ignore
     gsap.to(visualNodeY, {duration: GSAPSPEED / 3, y: '-100%', ease: ANIMATION_MODE})
     y.UI.y -= SPACE_BETWEEN_NODES_Y
+
     await waitForVisualAnimations(GSAPSPEED * 1000 + ANIMATION_OFFSET)
+
+    //Even if the animation did the job visually in the DOM
+    //there is still the old order:
+    //x is still the parent of y
+    //this can break the algo on later rotations.
+    //Fix this!
+
+    //Reference to the visual area of the visualiser.
+    const visualArea = document.querySelector('.visual-area')! as HTMLDivElement
+    //To insert before, we need the parent.
+    let parentReference = visualArea
+    if(x.Parent)
+        parentReference = document.querySelector(`#c${x.Parent.UIId}`) as HTMLDivElement
+    console.log('+++', x, y, parentReference)
+    //Deeply clone y.
+    const cloneNodeY = visualNodeY.cloneNode(true) as HTMLDivElement
+    //Remove y so you do not deep clone it in x's clone.
+    visualNodeY.remove()
+    const cloneNodeX = visualNodeX.cloneNode(true) as HTMLDivElement
+    //Clear the previous translates as they make no sense now.
+    cloneNodeY.style.transform = ''
+    //Clear x's previous translates.
+    cloneNodeX.style.transform = ''
+    //Add x as the child of y.
+    //But add it as the first child.
+    cloneNodeY.insertBefore(cloneNodeX, cloneNodeY.firstChild)
+    // await waitForVisualAnimations(1000)
+
+    if(direction === DIRECTION.LEFT) {
+        //If y is the new root, it is already in place.
+        if(x.Parent !== undefined)
+            if(x === x.Parent.Right)
+                cloneNodeY.style.transform = `translate(${(x.NOFixUps + 1) * 100}%, 100%)`
+            else
+                cloneNodeY.style.transform = `translate(-${(x.NOFixUps + 1) * 100}%, 100%)`
+        cloneNodeX.style.transform = 'translate(-100%, 100%)'
+    }
+
+    if(direction === DIRECTION.RIGHT) {
+        if(x.Parent !== undefined)
+            if(x === x.Parent.Left)
+                cloneNodeY.style.transform = `translate(-${(x.NOFixUps + 1) * 100}%, 100%)`
+            else
+                cloneNodeY.style.transform = `translate(${(x.NOFixUps + 1) * 100}%, 100%)`
+        cloneNodeX.style.transform = 'translate(100%, 100%)'
+    }
+
+    parentReference.insertBefore(cloneNodeY, visualNodeX);
+    //Remove the old nodes.
+
+    await waitForVisualAnimations(WAITING_TIME)
+    visualNodeX.remove()
+
+
+    //If it is root.
+    if(x.Parent === undefined)
+        tree.Root = y
+
+    checkIfCollided(x, tree)
 
 }
 
 
 // This function rotates some nodes.
-const rotateLeft = async (x: Node, root: Node): Promise<INode> => {
+const rotateLeft = async (x: Node, tree: Tree): Promise<INode> => {
 // Here the Tree is RIGHT HEAVY
     const y = x.Right
     const subtree = y?.Left
@@ -159,12 +254,17 @@ const rotateLeft = async (x: Node, root: Node): Promise<INode> => {
 
     if(y) {
         y.Left = x
-        await visuallyRotateNode(x, y, DIRECTION.LEFT, root)
+        await visuallyRotateNode(x, y, DIRECTION.LEFT, tree)
     }
     x.Right = subtree
     //Fix the parents.
+    //Check to see where is the parent?
     if(p)
-        p.Right = y
+        //If x is his right child.
+        if(p.Right === x)
+            p.Right = y;
+        else
+            p.Left = y
     if(y)
         y.Parent = p
 
@@ -173,19 +273,24 @@ const rotateLeft = async (x: Node, root: Node): Promise<INode> => {
 }
 
 // This function rotates some nodes.
-const rotateRight = async (x: Node, root: Node): Promise<INode> => {
+const rotateRight = async (x: Node, tree: Tree): Promise<INode> => {
 // Here the Tree is LEFT HEAVY
     const y = x.Left
     const subtree = y?.Right
     const p = x.Parent
     if(y) {
         y.Right = x
-        await visuallyRotateNode(x, y, DIRECTION.RIGHT, root)
+        await visuallyRotateNode(x, y, DIRECTION.RIGHT, tree)
     }
     x.Left = subtree
     //Fix the parents.
+    //Check to see where is the parent?
     if(p)
-        p.Left = y
+        //If x is his right child.
+        if(p.Right === x)
+            p.Right = y;
+        else
+            p.Left = y
     if(y)
         y.Parent = p
 
@@ -193,8 +298,8 @@ const rotateRight = async (x: Node, root: Node): Promise<INode> => {
     return y
 }
 
-const insertAux = async (node: INode, key: number, prevNode: INode, direction: DIRECTION): Promise<Node> => {
-    console.log(node)
+const insertAux = async (node: INode, key: number, prevNode: INode, direction: DIRECTION, tree: Tree): Promise<Node> => {
+
 //    Insert as you would in a regular BST
     if(!node) {
         //I need to handle the UI here.
@@ -206,6 +311,7 @@ const insertAux = async (node: INode, key: number, prevNode: INode, direction: D
                 newUI = {x: prevNode!.UI.x - SPACE_BETWEEN_NODES_X, y: prevNode!.UI.y + SPACE_BETWEEN_NODES_Y}
         //Just create a regular new node.
         const node = createNode(key, COLOR.RED, newUI, prevNode);
+        console.log(node)
         //Also render it visually.
         await createNodeVisual(Node.LAST_ID += 1, key, newUI, node.Parent, direction, COLOR.RED)
         return node
@@ -214,7 +320,10 @@ const insertAux = async (node: INode, key: number, prevNode: INode, direction: D
         //First you have to wait for the visual representation of the search.
         await colorNode(node, 'green');
         //Just go to the right child.
-        node.Right = await insertAux(node.Right, key, node, DIRECTION.RIGHT)
+        node.Right = await insertAux(node.Right, key, node, DIRECTION.RIGHT, tree)
+        //Check for collisions.
+        //node.Right is the new node here.
+        await checkIfCollided(node.Right, tree)
         //After that, update the parent ref.
         node.Right.Parent = node;
     }
@@ -222,7 +331,10 @@ const insertAux = async (node: INode, key: number, prevNode: INode, direction: D
         //First you have to wait for the visual representation of the search.
         await colorNode(node, 'green');
         //Just go to the left child.
-        node.Left = await insertAux(node.Left, key, node, DIRECTION.LEFT);
+        node.Left = await insertAux(node.Left, key, node, DIRECTION.LEFT, tree);
+        //Check for collisions.
+        //node.Left is the new node here.
+        await checkIfCollided(node.Left, tree)
         //After that, update the parent ref.
         node.Left.Parent = node;
     }
@@ -249,23 +361,17 @@ const findNode = async (root: INode, key: number): Promise<void | INode> => {
         return root
 }
 
-let once = true
+
 //Function that inserts the given key in the RBTree.
 export const insert = async (root: Tree, key: number): Promise<void> => {
-    //Render visually the dummy root to help the flow begin.
-    if(once) {
-        await createNodeVisual(Node.LAST_ID += 1, root.Root.Key, root.Root.UI, undefined, DIRECTION.RIGHT, COLOR.BLACK)
-        once = false
-    }
-    root.Root = await insertAux(root.Root, key, undefined, DIRECTION.RIGHT)
+    root.Root = await insertAux(root.Root, key, undefined, DIRECTION.RIGHT, root)
     //We search the inserted node to check for unbalances.
     const insertedNode = await findNode(root.Root, key);
-    await RBFixup(insertedNode!, root.Root)
+    await RBFixup(insertedNode!, root)
 }
 
 //Function that fixes the properties of a RBTree starting from a given node.
-const RBFixup = async (node: Node, root: Node): Promise<void> => {
-    console.log('--', node, root)
+const RBFixup = async (node: Node, tree: Tree): Promise<void> => {
     //Parent of node.
     const p: INode = node.Parent
     //Grandparent of node.
@@ -284,7 +390,7 @@ const RBFixup = async (node: Node, root: Node): Promise<void> => {
         uColor = u ? u.Color : COLOR.BLACK
     }
     //If the root is not black.
-    if(node === root)
+    if(node === tree.Root)
         if(node.Color === COLOR.RED){
             node.Color = COLOR.BLACK
             await colorNode(node, 'black')
@@ -308,53 +414,53 @@ const RBFixup = async (node: Node, root: Node): Promise<void> => {
                 // Just color the node back.
                 await colorNode(node, 'red')
             //    Go up and continue the fix-up.
-                await RBFixup(p, root);
+                await RBFixup(p, tree);
             }
             else
                 //If the uncle is black.
                 if(uColor === COLOR.BLACK){
                 //    LR case.
                     if(node === p.Right && p === g?.Left) {
-                        await rotateLeft(p, root)
+                        await rotateLeft(p, tree)
                         await colorNode(p, 'red')
                         // Just color the node back.
                         await colorNode(node, 'red')
-                        await RBFixup(p, root);
+                        await RBFixup(p, tree);
                     }
                     //    RL case.
                     else
                         if(node === p.Left && p === g?.Right) {
-                            await rotateRight(p, root)
+                            await rotateRight(p, tree)
                             await colorNode(p, 'red')
                             // Just color the node back.
                             await colorNode(node, 'red')
-                            await RBFixup(p, root);
+                            await RBFixup(p, tree);
                         }
                         //RR case
                         else
                             if(node === p.Right && p === g?.Right) {
-                                await rotateLeft(g, root)
+                                await rotateLeft(g, tree)
                                 await changeColor(p)
                                 await changeColor(g)
                                 // Just color the node back.
                                 await colorNode(node, 'red')
-                                await RBFixup(p, root)
+                                await RBFixup(p, tree)
                             }
                             //LL case
                             else
                                 if(node === p.Left && p === g?.Left) {
-                                    await rotateRight(g, root)
+                                    await rotateRight(g, tree)
                                     await changeColor(p)
                                     await changeColor(g)
                                     // Just color the node back.
                                     await colorNode(node, 'red')
-                                    await RBFixup(p, root)
+                                    await RBFixup(p, tree)
                                 }
                 }
         }
     //No problems, just continue.
     else
-        await RBFixup(p, root);
+        await RBFixup(p, tree);
 
 }
 
@@ -375,24 +481,27 @@ const changeColor = async (node: INode): Promise<void> => {
     }
 }
 
-export const createTree = () => {
-    return new Tree(createNode(-1, COLOR.BLACK, {x: 0, y: 10}, undefined))
+export const createTree = async (key: number): Promise<Tree> => {
+    const root = new Tree(createNode(key, COLOR.BLACK, {x: 0, y: 0}, undefined))
+    //Render visually the root to help the flow begin.
+    await createNodeVisual(Node.LAST_ID += 1, root.Root.Key, root.Root.UI, undefined, DIRECTION.RIGHT, COLOR.BLACK)
+    return root
 }
 
-export const testMe = () => {
-    let tree = createTree()
-    insert(tree, 10)
-    insert(tree, 20)
-    insert(tree, 30)
-    insert(tree, 1)
-    insert(tree, 2)
-    insert(tree, 3)
-    insert(tree, 0)
-    // insert(tree, 6)
-    // insert(tree, 9)
-    // insert(tree, 8)
-    // insert(tree, 5)
-    preTraversal(tree.Root)
-    console.log('\n')
-    inTraversal(tree.Root)
-}
+// export const testMe = () => {
+//     let tree = createTree()
+//     insert(tree, 10)
+//     insert(tree, 20)
+//     insert(tree, 30)
+//     insert(tree, 1)
+//     insert(tree, 2)
+//     insert(tree, 3)
+//     insert(tree, 0)
+//     // insert(tree, 6)
+//     // insert(tree, 9)
+//     // insert(tree, 8)
+//     // insert(tree, 5)
+//     preTraversal(tree.Root, [], true)
+//     console.log('\n')
+//     inTraversal(tree.Root)
+// }
