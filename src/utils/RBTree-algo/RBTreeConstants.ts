@@ -1,6 +1,6 @@
 import {Node} from "./NodeClass";
 
-export const SPEED = 1
+export const SPEED = 600
 //Because GSAP wants a duration of 1, we have to accommodate this with our speed of 1000
 export const GSAPSPEED: number = SPEED / 1000
 export const SPACE_BETWEEN_NODES_X = 50
@@ -11,7 +11,7 @@ export const ANIMATION_MODE_ALT = 'none'
 //Offsets a bit the animations in certain points to make it more visually appealing.
 export const ANIMATION_OFFSET = 250
 //The time the animation will wait so people can see certain colouring, before changing them.
-export const WAITING_TIME = 1000
+export const WAITING_TIME = 1500
 
 export enum COLOR {
     RED, BLACK
