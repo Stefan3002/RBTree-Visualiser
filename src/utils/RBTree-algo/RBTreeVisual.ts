@@ -64,7 +64,7 @@ export const createNodeVisual = async (UIid: number, key: number, ui: UIInterfac
         const goInCreationZone = window.innerWidth - 200 - (window.innerWidth - window.innerWidth / 2) - ui.x - SPACE_BETWEEN_NODES_X
         await translateX(child, goInCreationZone.toString(), (GSAPSPEED / 3).toString(), key.toString(), color)
 
-        await translateX(child, '0', (GSAPSPEED / 3).toString(), key.toString(), color)
+        await translateX(child, '0', (GSAPSPEED / 3).toString(), undefined, color)
 
         if(parent !== undefined)
             if(direction === DIRECTION.RIGHT)
