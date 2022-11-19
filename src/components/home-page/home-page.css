@@ -24,5 +24,8 @@
   width: 230px;
   font-size: 1.3em;
 }
+.home-page-container .node-creator .write-area {
+  overflow: auto;
+}
 
 /*# sourceMappingURL=home-page.css.map */

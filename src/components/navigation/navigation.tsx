@@ -3,14 +3,19 @@ import React, {FormEvent, useState} from "react";
 import Button from "../button/button";
 import logoSVG from '../../utils/imgs/Logo.svg'
 import InputField from "../input-field/inputField";
-import {createTree, insert, preTraversal} from "../../utils/RBTree-algo/RBTreeAlgo";
+import {createTree, insert} from "../../utils/RBTree-algo/RBTreeAlgo";
 import {Outlet} from "react-router-dom";
 import {useDispatch, useSelector} from "react-redux";
 import {setAboutOpened} from "../../utils/store/about/aboutActions";
 import {getAboutOpened} from "../../utils/store/about/aboutSelectors";
-
+import {inTraversal, postTraversal, preTraversal} from "../../utils/RBTree-algo/Traversals";
+import {getTypeOfAlgo} from "../../utils/store/typeOfAlgo/typeSelectors";
+import {setTypeOfAlgo} from "../../utils/store/typeOfAlgo/typeActions";
 
 const Navigation: React.FC = () => {
+
+   const typeOfAlgo = useSelector(getTypeOfAlgo)
+
     const dispatch = useDispatch()
     const aboutOpened = useSelector(getAboutOpened)
 
@@ -25,7 +30,7 @@ const Navigation: React.FC = () => {
         // @ts-ignore
         const key = e.target[0].value
         if(root)
-            await insert(root, +key)
+            await insert(root, +key, typeOfAlgo)
         else
             { // @ts-ignore
                 setRoot(await createTree(+key))
@@ -34,7 +39,15 @@ const Navigation: React.FC = () => {
 
     const preTraverse = () => {
         // @ts-ignore
-        preTraversal(root.Root, [], true)
+        preTraversal(root.Root, [], true, true)
+    }
+    const inTraverse = () => {
+        // @ts-ignore
+        inTraversal(root.Root, [], true, true)
+    }
+    const postTraverse = () => {
+        // @ts-ignore
+        postTraversal(root.Root, [], true, true)
     }
 
     const openAbout = (): void => {
@@ -51,6 +64,10 @@ const Navigation: React.FC = () => {
                         <p>How does it work?</p>
                         <i className="fa-3x fa-solid fa-circle-question"></i>
                     </div>
+                    <div className="algo-chose">
+                        <Button type={undefined} clickHandler={() => dispatch(setTypeOfAlgo(true))} text="Red-Black Tree" />
+                        <Button type={undefined} clickHandler={() => dispatch(setTypeOfAlgo(false))} text="Binary Search Tree" />
+                    </div>
                 </div>
                 <div className="bottom-section">
                     <form onSubmit={addNode} action="">
@@ -58,6 +75,8 @@ const Navigation: React.FC = () => {
                         <Button type='submit' text='Add node.' />
                     </form>
                     <Button type={undefined} clickHandler={preTraverse} text='Pre traverse tree.' />
+                    <Button type={undefined} clickHandler={inTraverse} text='In traverse tree.' />
+                    <Button type={undefined} clickHandler={postTraverse} text='Post traverse tree.' />
                 </div>
             </div>
             <Outlet />

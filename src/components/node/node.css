@@ -1,5 +1,5 @@
 .node-container {
-  z-index: 100;
+  z-index: 1;
   color: whitesmoke;
   border-radius: 50%;
   width: 50px;

@@ -1,4 +1,5 @@
 .button-container button {
+  cursor: pointer;
   background: transparent;
   border: 1px solid black;
   padding: 1em;
