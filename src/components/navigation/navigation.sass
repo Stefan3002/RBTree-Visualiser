@@ -11,3 +11,22 @@
     width: 100px
   .how-work
     cursor: pointer
+  .traversals-menu-container
+    position: relative
+    z-index: 2
+    .traversals-menu
+      animation-name: slide-right
+      animation-duration: .4s
+      position: absolute
+      top: -100%
+      left: 0
+      animation-fill-mode: forwards
+      background: whitesmoke
+      padding: 1em
+      border-radius: 0 10px 10px 0
+      z-index: 1
+  @keyframes slide-right
+    from
+      transform: translateX(0)
+    to
+      transform: translateX(calc(110% + 1em))

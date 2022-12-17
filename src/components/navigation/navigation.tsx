@@ -14,6 +14,8 @@ import {setTypeOfAlgo} from "../../utils/store/typeOfAlgo/typeActions";
 
 const Navigation: React.FC = () => {
 
+    const [traversalsMenuOpened, setTraversalsMenuOpened] = useState(false)
+
    const typeOfAlgo = useSelector(getTypeOfAlgo)
 
     const dispatch = useDispatch()
@@ -54,6 +56,10 @@ const Navigation: React.FC = () => {
         aboutOpened ? dispatch(setAboutOpened(false)) : dispatch(setAboutOpened(true))
     }
 
+    const openTraversalsMenu = () => {
+       traversalsMenuOpened ? setTraversalsMenuOpened(false) : setTraversalsMenuOpened(true)
+    }
+
     return (
         <>
             <div className='navigation-container'>
@@ -74,9 +80,14 @@ const Navigation: React.FC = () => {
                         <InputField text='Value of the node key.' />
                         <Button type='submit' text='Add node.' />
                     </form>
-                    <Button type={undefined} clickHandler={preTraverse} text='Pre traverse tree.' />
-                    <Button type={undefined} clickHandler={inTraverse} text='In traverse tree.' />
-                    <Button type={undefined} clickHandler={postTraverse} text='Post traverse tree.' />
+                    <div className="traversals-menu-container">
+                        <Button type={undefined} clickHandler={openTraversalsMenu} text="Traversals." />
+                        {traversalsMenuOpened ? <div className='traversals-menu'>
+                            <Button type={undefined} clickHandler={preTraverse} text='Pre traverse tree.' />
+                            <Button type={undefined} clickHandler={inTraverse} text='In traverse tree.' />
+                            <Button type={undefined} clickHandler={postTraverse} text='Post traverse tree.' />
+                        </div>: null}
+                    </div>
                 </div>
             </div>
             <Outlet />
