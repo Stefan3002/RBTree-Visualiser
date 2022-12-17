@@ -31,12 +31,13 @@ const Navigation: React.FC = () => {
         e.preventDefault()
         // @ts-ignore
         const key = e.target[0].value
-        if(root)
-            await insert(root, +key, typeOfAlgo)
-        else
-            { // @ts-ignore
+        if(Number.isInteger(parseInt(key))) {
+            if (root)
+                await insert(root, +key, typeOfAlgo)
+            else { // @ts-ignore
                 setRoot(await createTree(+key))
             }
+        }
     }
 
     const preTraverse = () => {
