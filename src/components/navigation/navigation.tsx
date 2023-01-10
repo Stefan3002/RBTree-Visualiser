@@ -11,6 +11,7 @@ import {getAboutOpened} from "../../utils/store/about/aboutSelectors";
 import {inTraversal, postTraversal, preTraversal} from "../../utils/RBTree-algo/Traversals";
 import {getTypeOfAlgo} from "../../utils/store/typeOfAlgo/typeSelectors";
 import {setTypeOfAlgo} from "../../utils/store/typeOfAlgo/typeActions";
+import {changeSpeed} from "../../utils/RBTree-algo/RBTreeConstants";
 
 const Navigation: React.FC = () => {
 
@@ -61,6 +62,15 @@ const Navigation: React.FC = () => {
        traversalsMenuOpened ? setTraversalsMenuOpened(false) : setTraversalsMenuOpened(true)
     }
 
+    const [speed, setSpeed] = useState(600)
+
+    // @ts-ignore
+    const printChosenSpeed = (event) => {
+        const speed = event.target.value
+        changeSpeed(speed)
+        setSpeed(speed)
+    }
+
     return (
         <>
             <div className='navigation-container'>
@@ -77,6 +87,8 @@ const Navigation: React.FC = () => {
                     </div>
                 </div>
                 <div className="bottom-section">
+                    <p>Delay(ms): {speed}</p>
+                    <input type="range" onChange={printChosenSpeed} min='100' max='2000' />
                     <form onSubmit={addNode} action="">
                         <InputField text='Value of the node key.' />
                         <Button type='submit' text='Add node.' />
